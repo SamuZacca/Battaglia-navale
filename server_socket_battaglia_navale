@@ -1,0 +1,88 @@
+import threading
+import socket
+import facilities
+let_to_num={'A':0,'B':1,'C':2}
+def gestisci_comunicazione(lista,cont):
+    Campo_Giocatore_1=[[' ']*3 for x in range(3)]
+    Campo_Giocatore_2=[[' ']*3 for x in range(3)]
+    navi1=int(2)
+    navi2=int(2)
+    lock=threading.Lock()
+    data=lista[cont].recv(1024)
+    data=facilities.bytes_to_list(data)
+    if cont==0:
+        Campo_Giocatore_1=data
+        lista_convertita=facilities.list_to_bytes(Campo_Giocatore_1)
+        lista[1].send(lista_convertita)
+        data=lista[cont].recv(1024)
+        Campo_Giocatore_2=facilities.bytes_to_list(data)
+    else:
+        Campo_Giocatore_2=data
+        lista_convertita=facilities.list_to_bytes(Campo_Giocatore_2)
+        lista[0].send(lista_convertita)
+        data=lista[cont].recv(1024)
+        Campo_Giocatore_1=facilities.bytes_to_list(data)
+    i=0
+    while True:
+        try:
+            with lock:
+                if cont==0:
+                    if i==0:
+                        lista[0].send(("Inizi tu a giocare!").encode())
+                        i=i+1
+                tot=str()
+                tot=lista[cont].recv(1024).decode()
+                if cont==0:
+                    r=(int(tot[0]))-1
+                    c=int(let_to_num[tot[-1]])
+                    if Campo_Giocatore_2[r][c]=='X':
+                        navi2=int(navi2)-1
+                        if navi2==0:
+                            lista[0].send(("Bravissimo! Hai colpito l'ultima nave avversaria! Hai vinto Battaglia Navale!").encode())
+                            lista[1].send(("Anche la tua ultima nave è stata abbattuta! Hai perso Battaglia Navale!").encode())
+                            break
+                        else:
+                            lista[0].send(("Bravo! Hai colpito una nave avversaria! Te ne rimangono "+str(navi2)+" da colpire!").encode())
+                            Campo_Giocatore_2[r][c]=''
+                            lista[1].send(("L'avversario ha colpito una tua nave! Te ne rimangono "+str(navi2)+" !").encode())
+                    else:
+                        lista[0].send(("Peccato! Non hai colpito nessuna nave avversaria!").encode())
+                        lista[1].send(("L'avversario non ha colpito una tua nave!").encode())
+                else:
+                    r=(int(tot[0]))-1
+                    c=int(let_to_num[tot[-1]])
+                    if Campo_Giocatore_1[r][c]=='X':
+                        navi1=int(navi1)-1
+                        if navi1==0:
+                            lista[0].send(("Anche la tua ultima nave è stata abbattuta! Hai perso Battaglia Navale!").encode())
+                            lista[1].send(("Bravissimo! Hai colpito l'ultima nave avversaria! Hai vinto Battaglia Navale!").encode())
+                            break
+                        else:
+                            lista[0].send(("L'avversario ha colpito una tua nave! Te ne rimangono "+str(navi1)+" !").encode())
+                            lista[1].send(("Bravo! Hai colpito una nave avversaria! Te ne rimangono "+str(navi1)+" da colpire!").encode())
+                            Campo_Giocatore_1[r][c]=''
+                    else:
+                        lista[0].send(("L'avversario non ha colpito una tua nave!").encode())
+                        lista[1].send(("Peccato! Non hai colpito nessuna nave avversaria!").encode())
+        except:
+            pass
+    return
+print("Server in ascolto: ")
+HOST = ''
+PORT = 50007
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.bind((HOST, PORT))
+s.listen(10)
+thread = []
+i=0
+lista_connessioni = []
+while i<2:
+    conn,addr=s.accept()
+    lista_connessioni.append(conn)
+    print(addr, "si è unito alla battaglia!")
+    if i==1:
+        thread.append(threading.Thread(target=gestisci_comunicazione, args=(lista_connessioni,0)))
+        thread.append(threading.Thread(target=gestisci_comunicazione, args=(lista_connessioni,1)))
+        thread[0].start()
+        thread[i].start()
+    i=i+1

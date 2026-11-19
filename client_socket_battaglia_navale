@@ -1,0 +1,64 @@
+import socket
+import facilities
+Mio_Campo=[[' ']*3 for x in range(3)]
+Campo_Scelte=[[' ']*3 for x in range(3)]
+HOST = '127.0.0.1'    # Il nodo remoto, qui metti il tuo indirizzo IP per provare connessione server e client dalla tua macchina alla tua macchina
+PORT = 50007              # La stessa porta usata dal server
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect((HOST, PORT))
+row_num=1
+let_to_num={'A':0,'B':1,'C':2}
+cont=int(0)
+print("Benvenuto in Battaglia Navale!")
+print("Questa è il campo dove si svolgerà la battaglia!")
+print('  A B C')
+for row in Mio_Campo:
+    print("%d|%s|" % (row_num, "|".join(row)))
+    row_num +=1
+for ship in range(2):
+    ship_r, ship_cl=str(input("Inserisci la riga dove posizionare la nave (1,2,3): ")), str(input("Inserisci la colonna dove posizionare la nave (A,B,C): ")).upper()
+    while ship_r not in '123' or ship_cl not in 'ABC':
+        print("Inserisci una posizione valida!")
+        ship_r, ship_cl=str(input("Inserisci la riga dove posizionare la nave (1,2,3): ")), str(input("Inserisci la colonna dove posizionare la nave (A,B,C): ")).upper()
+    ship_cl=int(let_to_num[ship_cl])
+    ship_r=int(ship_r)-1
+    while Mio_Campo[ship_r][ship_cl]=='X':
+        print("In questa posizione è già stata piazzata una nave!")
+        ship_r, ship_cl=str(input("Inserisci la riga dove posizionare la nave (1,2,3): ")), str(input("Inserisci la colonna dove posizionare la nave (A,B,C): ")).upper()
+        ship_cl=int(let_to_num[ship_cl])
+        ship_r=int(ship_r)-1
+    Mio_Campo[ship_r][ship_cl]='X'
+print("Questo è il tuo campo di battaglia!")
+print('  A B C')
+row_num=1
+for row in Mio_Campo:
+    print("%d|%s|" % (row_num, "|".join(row)))
+    row_num +=1
+lista_convertita=facilities.list_to_bytes(Mio_Campo)
+s.send(lista_convertita)
+i=0
+while True:
+    if i==0:
+        data=s.recv(1024)
+        s.send(data)
+    data=s.recv(1024).decode()
+    print("Ricevuto dal server: ", data)
+    if data=="Bravissimo! Hai colpito l'ultima nave avversaria! Hai vinto Battaglia Navale!":
+        break
+    if i!=0:
+        data=s.recv(1024).decode()
+        print("Ricevuto dal server: ", data)
+        if data=="Anche la tua ultima nave è stata abbattuta! Hai perso Battaglia Navale!":
+            break
+    riga=str(input("Inserisci la riga da colpire (1,2,3): "))
+    colonna=str(input("Inserisci la colonna da colpire (A,B,C): ")).upper()
+    while riga not in '123' or colonna not in 'ABC':
+        print("Inserisci una posizione valida!")
+        riga=str(input("Inserisci la riga da colpire (1,2,3): "))
+        colonna=str(input("Inserisci la colonna da colpire (A,B,C): ")).upper()
+    tot=str()
+    tot=riga+colonna
+    s.send(tot.encode())
+    i=i+1
+print("Arrivederci Utente")
+s.close()
